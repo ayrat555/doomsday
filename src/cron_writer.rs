@@ -1,10 +1,11 @@
 use cronenberg::cron_item::CronItem;
 use cronenberg::cron_item::TimeItem::*;
-use std::process::{Command, Stdio};
+use std::process::{Command, Stdio, Child};
 use std::error::Error;
 use std::io::{Write, Read};
 use std::fmt;
 use std::fmt::{Display, Formatter};
+use self::CronWriterError::*;
 
 #[derive(Debug)]
 pub struct CronWriter {
@@ -24,29 +25,45 @@ impl Display for CronWriter {
     }
 }
 
+pub enum CronWriterError {
+    ProcessSpawnError(String),
+    CrontabStdinError(String),
+    CrontabError(String)
+}
+
 impl CronWriter {
-    pub fn write(&self) -> Result<(), &'static str> {
-        let process = match Command::new("crontab")
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .spawn() {
-                Err(why) => panic!("couldn't spawn crontab: {}", why.description()),
-                Ok(process) => process,
-            };
+    pub fn write(&self) -> Result<(), CronWriterError> {
+        let process = start_crontab_process()?;
 
-        match process.stdin.unwrap().write_all(self.to_string().as_bytes()) {
-            Err(why) => panic!("couldn't write to crontab stdin: {}", why.description()),
-            Ok(_) => println!("wrote data to crontab"),
+        write_data(self, &process)?;
+
+        read_process_output(process)
+    }
+}
+
+fn start_crontab_process() -> Result<Child, CronWriterError> {
+    match Command::new("crontab")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn() {
+            Err(er) => Err(ProcessSpawnError(String::from(er.description()))),
+            Ok(process) => Ok(process),
         }
+}
 
-        let mut s = String::new();
-        match process.stdout.unwrap().read_to_string(&mut s) {
-            Err(why) => panic!("couldn't read crontab stdout: {}",
-                               why.description()),
-            Ok(_) => print!("crontab responded with:\n{}", s),
-        }
+fn write_data(cron_writer: &CronWriter, process: &Child) -> Result<(), CronWriterError> {
+    match process.stdin.unwrap().write_all(cron_writer.to_string().as_bytes()) {
+        Err(ref message) => Err(CrontabStdinError(String::from(message.description()))),
+        Ok(_) => Ok(println!("wrote data to crontab")),
+    }
+}
 
-        Ok(())
+fn read_process_output(process: Child) -> Result<(), CronWriterError> {
+    let mut s = String::new();
+
+    match process.stdout.unwrap().read_to_string(&mut s) {
+        Err(message) => Err(CrontabError(String::from(message.description()))),
+        Ok(_) => Ok(print!("crontab responded with:\n{}", s)),
     }
 }
 
@@ -66,7 +83,7 @@ mod test {
                 day_of_month: Interval((5, 7)),
                 month: MultipleValues(vec![1, 2, 5]),
                 day_of_week: SingleValue(8),
-                command: String::from("sudo rm -rf /"),
+                command: String::from("pwd"),
             },
             CronItem {
                 minute: MultipleValues(vec![1, 10]),
@@ -80,7 +97,7 @@ mod test {
         let writer = CronWriter { items };
 
         assert_eq!(
-            "* * 5-7 1,2,5 8 sudo rm -rf /\n1,10 1-4 1-11 1,2,5 * ls -la\n",
+            "* * 5-7 1,2,5 8 pwd\n1,10 1-4 1-11 1,2,5 * ls -la\n",
             writer.to_string()
         )
     }
