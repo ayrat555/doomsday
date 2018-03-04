@@ -24,6 +24,33 @@ impl Display for CronWriter {
     }
 }
 
+impl CronWriter {
+    pub fn write(&self) -> Result<(), &'static str> {
+        let process = match Command::new("crontab")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn() {
+                Err(why) => panic!("couldn't spawn crontab: {}", why.description()),
+                Ok(process) => process,
+            };
+
+        match process.stdin.unwrap().write_all(self.to_string().as_bytes()) {
+            Err(why) => panic!("couldn't write to crontab stdin: {}", why.description()),
+            Ok(_) => println!("wrote data to crontab"),
+        }
+
+        let mut s = String::new();
+        match process.stdout.unwrap().read_to_string(&mut s) {
+            Err(why) => panic!("couldn't read crontab stdout: {}",
+                               why.description()),
+            Ok(_) => print!("crontab responded with:\n{}", s),
+        }
+
+        Ok(())
+    }
+}
+
+
 mod test {
     use cronenberg::cron_item::CronItem;
     use cronenberg::cron_item::TimeItem::*;
