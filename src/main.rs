@@ -12,9 +12,10 @@ fn main() {
         .summary("Doomsady")
         .body("The day is coming")
         .icon("doom")
-        .show().unwrap();
+        .show()
+        .unwrap();
 
-    let items = vec!(
+    let items = vec![
         CronItem {
             minute: AllValues,
             hour: AllValues,
@@ -30,9 +31,9 @@ fn main() {
             month: AllValues,
             day_of_week: AllValues,
             command: String::from("ls -la"),
-        }
-    );
+        },
+    ];
 
-    let cron_writer = CronWriter{ items };
+    let cron_writer = CronWriter { items };
     cron_writer.write();
 }

@@ -1,8 +1,8 @@
 use cronenberg::cron_item::CronItem;
 use cronenberg::cron_item::TimeItem::*;
-use std::process::{Command, Stdio, Child};
+use std::process::{Child, Command, Stdio};
 use std::error::Error;
-use std::io::{Write, Read};
+use std::io::{Read, Write};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use self::CronWriterError::*;
@@ -28,7 +28,7 @@ impl Display for CronWriter {
 pub enum CronWriterError {
     ProcessSpawnError(String),
     CrontabStdinError(String),
-    CrontabError(String)
+    CrontabError(String),
 }
 
 impl CronWriter {
@@ -45,14 +45,19 @@ fn start_crontab_process() -> Result<Child, CronWriterError> {
     match Command::new("crontab")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .spawn() {
-            Err(er) => Err(ProcessSpawnError(String::from(er.description()))),
-            Ok(process) => Ok(process),
-        }
+        .spawn()
+    {
+        Err(er) => Err(ProcessSpawnError(String::from(er.description()))),
+        Ok(process) => Ok(process),
+    }
 }
 
 fn write_data(cron_writer: &CronWriter, process: &Child) -> Result<(), CronWriterError> {
-    match process.stdin.unwrap().write_all(cron_writer.to_string().as_bytes()) {
+    match process
+        .stdin
+        .unwrap()
+        .write_all(cron_writer.to_string().as_bytes())
+    {
         Err(ref message) => Err(CrontabStdinError(String::from(message.description()))),
         Ok(_) => Ok(println!("wrote data to crontab")),
     }
@@ -67,7 +72,6 @@ fn read_process_output(process: Child) -> Result<(), CronWriterError> {
     }
 }
 
-
 mod test {
     use cronenberg::cron_item::CronItem;
     use cronenberg::cron_item::TimeItem::*;
@@ -76,7 +80,7 @@ mod test {
 
     #[test]
     fn convert_cron_writer_to_string() {
-        let items = vec!(
+        let items = vec![
             CronItem {
                 minute: AllValues,
                 hour: AllValues,
@@ -92,8 +96,8 @@ mod test {
                 month: MultipleValues(vec![1, 2, 5]),
                 day_of_week: AllValues,
                 command: String::from("ls -la"),
-            }
-        );
+            },
+        ];
         let writer = CronWriter { items };
 
         assert_eq!(
