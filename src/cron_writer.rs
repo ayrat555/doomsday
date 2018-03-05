@@ -1,5 +1,5 @@
 use cronenberg::cron_item::CronItem;
-use std::process::{Child, Command, Stdio, ChildStdin, ChildStdout};
+use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 use std::error::Error;
 use std::io::{Read, Write};
 use std::fmt;
@@ -34,7 +34,7 @@ impl CronWriter {
     pub fn write(&self) -> Result<(), CronWriterError> {
         let process = start_crontab_process()?;
 
-        write_data(&self, &mut process.stdin.unwrap())?;
+        write_data(self.to_string(), &mut process.stdin.unwrap())?;
 
         read_process_output(&mut process.stdout.unwrap())
     }
@@ -51,9 +51,8 @@ fn start_crontab_process() -> Result<Child, CronWriterError> {
     }
 }
 
-fn write_data(cron_writer: &CronWriter, stdin: &mut ChildStdin) -> Result<(), CronWriterError> {
-    match stdin.write_all(cron_writer.to_string().as_bytes())
-    {
+fn write_data(string: String, stdin: &mut ChildStdin) -> Result<(), CronWriterError> {
+    match stdin.write_all(string.as_bytes()) {
         Err(err) => Err(CrontabStdinError(String::from(err.description()))),
         Ok(_) => Ok(println!("wrote data to crontab")),
     }
