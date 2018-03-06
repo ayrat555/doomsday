@@ -5,7 +5,9 @@ extern crate notify_rust;
 use notify_rust::Notification;
 
 mod cron_writer;
+mod crontab;
 use cron_writer::CronWriter;
+use crontab::Crontab;
 
 fn main() {
     Notification::new()
@@ -33,7 +35,7 @@ fn main() {
             command: String::from("ls -la"),
         },
     ];
-
-    let cron_writer = CronWriter { items };
-    cron_writer.write();
+    let crontab = Crontab { items };
+    let cron_writer = CronWriter::default();
+    cron_writer.write(crontab);
 }
