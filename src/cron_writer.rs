@@ -1,12 +1,9 @@
-use cronenberg::cron_item::CronItem;
-use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
+use std::process::{Child, ChildStderr, ChildStdin, Command, Stdio};
 use std::error::Error;
 use std::io::{Read, Write};
-use std::fmt;
-use std::fmt::{Display, Formatter};
 use std::default::Default;
-use self::CronWriterError::*;
 use crontab::Crontab;
+use self::CronWriterError::*;
 
 #[derive(Debug)]
 pub struct CronWriter {
@@ -14,13 +11,19 @@ pub struct CronWriter {
     pub user: String,
 }
 
+#[derive(Debug, PartialEq)]
 pub enum CronWriterError {
     ProcessSpawnError(String),
     CrontabStdinError(String),
+    CrontabStderrError(String),
     CrontabError(String),
 }
 
 impl CronWriter {
+    pub fn new(cron_command: String, user: String) -> Self {
+        Self { cron_command, user }
+    }
+
     pub fn command(&self) -> String {
         if self.user == "" {
             return self.cron_command.to_owned();
@@ -44,8 +47,7 @@ impl CronWriter {
         let process = start_crontab_process(&self.command())?;
 
         write_data(crontab.to_string(), &mut process.stdin.unwrap())?;
-
-        read_process_output(&mut process.stdout.unwrap())
+        read_process_errors(&mut process.stderr.unwrap())
     }
 }
 
@@ -53,6 +55,7 @@ fn start_crontab_process(command: &str) -> Result<Child, CronWriterError> {
     match Command::new(command)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .spawn()
     {
         Err(er) => Err(ProcessSpawnError(String::from(er.description()))),
@@ -63,15 +66,21 @@ fn start_crontab_process(command: &str) -> Result<Child, CronWriterError> {
 fn write_data(string: String, stdin: &mut ChildStdin) -> Result<(), CronWriterError> {
     match stdin.write_all(string.as_bytes()) {
         Err(err) => Err(CrontabStdinError(String::from(err.description()))),
-        Ok(_) => Ok(println!("wrote data to crontab")),
+        Ok(_) => Ok(()),
     }
 }
 
-fn read_process_output(stdout: &mut ChildStdout) -> Result<(), CronWriterError> {
+fn read_process_errors(stdout: &mut ChildStderr) -> Result<(), CronWriterError> {
     let mut s = String::new();
 
     match stdout.read_to_string(&mut s) {
-        Err(err) => Err(CrontabError(String::from(err.description()))),
-        Ok(_) => Ok(print!("crontab responded with:\n{}", s)),
+        Err(err) => Err(CrontabStderrError(String::from(err.description()))),
+        Ok(_) => {
+            if s == String::from("") {
+                Ok(())
+            } else {
+                Err(CrontabError(String::from(s)))
+            }
+        }
     }
 }
