@@ -20,10 +20,6 @@ pub enum CronWriterError {
 }
 
 impl CronWriter {
-    pub fn new(cron_command: String, user: String) -> Self {
-        Self { cron_command, user }
-    }
-
     pub fn command(&self) -> String {
         if self.user == "" {
             return self.cron_command.to_owned();
@@ -82,5 +78,26 @@ fn read_process_errors(stdout: &mut ChildStderr) -> Result<(), CronWriterError> 
                 Err(CrontabError(String::from(s)))
             }
         }
+    }
+}
+
+mod test {
+    use super::CronWriter;
+
+    #[test]
+    fn return_default_command() {
+        let cron_writer = CronWriter::default();
+
+        assert_eq!("crontab", cron_writer.command());
+    }
+
+    #[test]
+    fn build_custom_cron_command() {
+        let cron_writer = CronWriter {
+            cron_command: String::from("hey_cron"),
+            user: String::from("doom"),
+        };
+
+        assert_eq!("hey_cron -u doom", cron_writer.command());
     }
 }
