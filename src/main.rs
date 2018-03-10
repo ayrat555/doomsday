@@ -1,5 +1,6 @@
 extern crate clap;
 extern crate cronenberg;
+extern crate yaml_rust;
 use cronenberg::cron_item::CronItem;
 use cronenberg::cron_item::TimeItem::*;
 extern crate notify_rust;
@@ -8,6 +9,7 @@ use notify_rust::Notification;
 mod cron_writer;
 mod crontab;
 mod notifier;
+mod yaml_parser;
 use cron_writer::CronWriter;
 use crontab::Crontab;
 use clap::{Arg, App};
@@ -26,6 +28,16 @@ fn main() {
              .short("s")
              .long("schedule")
              .help("Schedules system notifications")
+             .takes_value(true))
+        .arg(Arg::with_name("cron command")
+             .short("c")
+             .long("command")
+             .help("Cron command")
+             .takes_value(true))
+        .arg(Arg::with_name("cron user")
+             .short("u")
+             .long("user")
+             .help("Cron user")
              .takes_value(true))
         .get_matches();
 
