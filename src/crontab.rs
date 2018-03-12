@@ -1,7 +1,8 @@
 use std::fmt::{Display, Formatter};
 use std::fmt;
-use cronenberg::cron_item::CronItem;
+use cronenberg::CronItem;
 
+#[derive(Debug, PartialEq)]
 pub struct Crontab {
     pub items: Vec<CronItem>,
 }

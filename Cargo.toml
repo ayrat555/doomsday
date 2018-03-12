@@ -6,6 +6,6 @@ authors = ["Ayrat Badykov <ayratin555@gmail.com>"]
 [dependencies]
 chrono = "0.4"
 notify-rust = "3"
-cronenberg = "0.2.0"
+cronenberg = "0.3.0"
 clap = "~2.31"
 yaml-rust = "0.4"
