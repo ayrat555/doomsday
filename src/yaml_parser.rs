@@ -1,4 +1,4 @@
-use yaml_rust::{YamlLoader, YamlEmitter};
+use yaml_rust::{YamlEmitter, YamlLoader};
 use crontab::Crontab;
 use cronenberg::CronItem;
 use std::str::FromStr;
@@ -27,12 +27,15 @@ fn read_yaml(path: &str) -> String {
 fn parse_yaml(string: String) -> Crontab {
     let yaml = YamlLoader::load_from_str(string.as_str()).unwrap();
 
-    let mut items = vec!();
+    let mut items = vec![];
     for notification in yaml[0]["schedule"].as_vec().unwrap() {
         let cron_item = CronItem::from_str(notification[0].as_str().unwrap()).unwrap();
         let message = notification[1].as_str().unwrap();
 
-        items.push(CronItem{ command: build_command(message), ..cron_item});
+        items.push(CronItem {
+            command: build_command(message),
+            ..cron_item
+        });
     }
 
     Crontab { items }
@@ -52,10 +55,10 @@ mod tests {
     fn parse_simple_file() {
         let parsed_crontab = parse_notifications_from_yaml("./tests/yml_examples/simple.yml");
         let expected_crontab = Crontab {
-            items: vec!(
+            items: vec![
                 CronItem::from_str("* * 5-7 1,2,5 8,1 doomsday -m hello").unwrap(),
-                CronItem::from_str("* * * * * doomsday -m goodbye").unwrap()
-            )
+                CronItem::from_str("* * * * * doomsday -m goodbye").unwrap(),
+            ],
         };
 
         assert_eq!(parsed_crontab, expected_crontab);
